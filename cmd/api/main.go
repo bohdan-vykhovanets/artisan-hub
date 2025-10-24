@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/bohdan-vykhovanets/artisan-hub/internal/cache"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/database"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/handlers"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ func main() {
 	}
 
 	database.ConnectDatabase()
+	cache.InitCache()
 
 	r := gin.Default()
 

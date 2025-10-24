@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/bohdan-vykhovanets/artisan-hub/internal/cache"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/database"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/models"
 	"github.com/gin-gonic/gin"
@@ -49,21 +51,33 @@ func GetArtists(c *gin.Context) {
 
 // GetArtist - GET /artists/:id
 func GetArtist(c *gin.Context) {
-	var artist models.Artist
 	id := c.Param("id")
+	cacheKey := "artist_" + id
+
+	if cachedArtist, found := cache.AppCache.Get(cacheKey); found {
+		fmt.Println("CACHE HIT for artist:", id)
+		c.JSON(http.StatusOK, cachedArtist)
+		return
+	}
+
+	fmt.Println("CACHE MISS for artist:", id)
+	var artist models.Artist
 
 	if err := database.DB.Preload("Artworks").First(&artist, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Artist not found"})
 		return
 	}
 
+	cache.AppCache.Set(cacheKey, artist, cache.DefaultExpiration)
+
 	c.JSON(http.StatusOK, artist)
 }
 
 // UpdateArtist - PUT /artists/:id
 func UpdateArtist(c *gin.Context) {
-	var artist models.Artist
 	id := c.Param("id")
+	cacheKey := "artist_" + id
+	var artist models.Artist
 
 	if err := database.DB.First(&artist, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Artist not found"})
@@ -78,13 +92,17 @@ func UpdateArtist(c *gin.Context) {
 
 	database.DB.Model(&artist).Updates(input)
 
+	fmt.Println("CACHE DELETE for artist:", id)
+	cache.AppCache.Delete(cacheKey)
+
 	c.JSON(http.StatusOK, artist)
 }
 
 // DeleteArtist - DELETE /artists/:id
 func DeleteArtist(c *gin.Context) {
-	var artist models.Artist
 	id := c.Param("id")
+	cacheKey := "artist_" + id
+	var artist models.Artist
 
 	if err := database.DB.First(&artist, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Artist not found"})
@@ -92,6 +110,9 @@ func DeleteArtist(c *gin.Context) {
 	}
 
 	database.DB.Delete(&artist)
+
+	fmt.Println("CACHE DELETE for artist:", id)
+	cache.AppCache.Delete(cacheKey)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Artist deleted successfully"})
 }

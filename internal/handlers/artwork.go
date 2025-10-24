@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/bohdan-vykhovanets/artisan-hub/internal/cache"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/database"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/models"
 	"github.com/gin-gonic/gin"
@@ -55,21 +57,33 @@ func GetArtworks(c *gin.Context) {
 
 // GetArtwork - GET /artworks/:id
 func GetArtwork(c *gin.Context) {
-	var artwork models.Artwork
 	id := c.Param("id")
+	cacheKey := "artwork_" + id
+
+	if cachedArtwork, found := cache.AppCache.Get(cacheKey); found {
+		fmt.Println("CACHE HIT for artwork:", id)
+		c.JSON(http.StatusOK, cachedArtwork)
+		return
+	}
+
+	fmt.Println("CACHE MISS for artwork:", id)
+	var artwork models.Artwork
 
 	if err := database.DB.First(&artwork, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Artwork not found"})
 		return
 	}
 
+	cache.AppCache.Set(cacheKey, artwork, cache.DefaultExpiration)
+
 	c.JSON(http.StatusOK, artwork)
 }
 
 // UpdateArtwork - PUT /artworks/:id
 func UpdateArtwork(c *gin.Context) {
-	var artwork models.Artwork
 	id := c.Param("id")
+	cacheKey := "artwork_" + id
+	var artwork models.Artwork
 
 	if err := database.DB.First(&artwork, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Artwork not found"})
@@ -84,13 +98,17 @@ func UpdateArtwork(c *gin.Context) {
 
 	database.DB.Model(&artwork).Updates(input)
 
+	fmt.Println("CACHE DELETE for artwork:", id)
+	cache.AppCache.Delete(cacheKey)
+
 	c.JSON(http.StatusOK, artwork)
 }
 
 // DeleteArtwork - DELETE /artworks/:id
 func DeleteArtwork(c *gin.Context) {
-	var artwork models.Artwork
 	id := c.Param("id")
+	cacheKey := "artwork_" + id
+	var artwork models.Artwork
 
 	if err := database.DB.First(&artwork, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Artwork not found"})
@@ -98,6 +116,9 @@ func DeleteArtwork(c *gin.Context) {
 	}
 
 	database.DB.Delete(&artwork)
+
+	fmt.Println("CACHE DELETE for artwork:", id)
+	cache.AppCache.Delete(cacheKey)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Artwork deleted successfully"})
 }
