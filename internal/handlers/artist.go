@@ -116,3 +116,26 @@ func DeleteArtist(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Artist deleted successfully"})
 }
+
+func ShowArtistPage(c *gin.Context) {
+	id := c.Param("id")
+	var artist models.Artist
+
+	if err := database.DB.Preload("Artworks").First(&artist, id).Error; err != nil {
+		c.HTML(http.StatusNotFound, "404.html", nil)
+		return
+	}
+
+	c.HTML(http.StatusOK, "artist.html", artist)
+}
+
+func ShowArtistsPage(c *gin.Context) {
+	var artists []models.Artist
+
+	if err := database.DB.Order("name asc").Find(&artists).Error; err != nil {
+		c.String(http.StatusInternalServerError, "Error fetching artists")
+		return
+	}
+
+	c.HTML(http.StatusOK, "artists.html", artists)
+}

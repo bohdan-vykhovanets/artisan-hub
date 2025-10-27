@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/cache"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/database"
@@ -22,11 +23,20 @@ func main() {
 
 	r := gin.Default()
 
+	r.LoadHTMLGlob("templates/*")
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
 	})
+
+	r.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/artists")
+	})
+	r.GET("/artists", handlers.ShowArtistsPage)
+	r.GET("/artists/:id", handlers.ShowArtistPage)
+	r.GET("/artworks/:id", handlers.ShowArtworkPage)
 
 	v1 := r.Group("/api/v1")
 	{

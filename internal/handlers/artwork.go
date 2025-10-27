@@ -122,3 +122,15 @@ func DeleteArtwork(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Artwork deleted successfully"})
 }
+
+func ShowArtworkPage(c *gin.Context) {
+	id := c.Param("id")
+	var artwork models.Artwork
+
+	if err := database.DB.First(&artwork, id).Error; err != nil {
+		c.HTML(http.StatusNotFound, "404.html", gin.H{"error": "Artwork not found"})
+		return
+	}
+
+	c.HTML(http.StatusOK, "artwork.html", artwork)
+}

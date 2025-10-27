@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Artists - Artisan Hub</title>
+    <meta name="description" content="Browse a collection of talented artists and their portfolios.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5R3GYLJR6N"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-5R3GYLJR6N', { 'debug_mode': true });
+    </script>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="text-center mb-4">
+        <h1>Welcome to Artisan Hub</h1>
+        <p class="lead">Discover amazing artists and their work.</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {{if .}}
+        {{range .}}
+        <div class="col">
+            <a href="/artists/{{.ID}}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-dark">{{.Name}}</h5>
+                        <p class="card-text text-muted">{{.Bio}}</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {{end}}
+        {{else}}
+        <p class="text-center">No artists have been added yet.</p>
+        {{end}}
+    </div>
+</div>
+</body>
+</html>
