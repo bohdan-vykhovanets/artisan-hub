@@ -1,15 +1,23 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/cache"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/database"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/models"
+	"github.com/bohdan-vykhovanets/artisan-hub/internal/websocket"
 	"github.com/gin-gonic/gin"
 )
+
+type WebSocketMessage struct {
+	Event   string         `json:"event"`
+	Artwork models.Artwork `json:"artwork"`
+}
 
 // CreateArtwork - POST /artworks
 func CreateArtwork(c *gin.Context) {
@@ -30,6 +38,14 @@ func CreateArtwork(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
 		return
+	}
+
+	msg := WebSocketMessage{Event: "artwork_created", Artwork: artwork}
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("Error marshalling websocket message:", err)
+	} else {
+		websocket.AppHub.Broadcast(msgBytes)
 	}
 
 	c.JSON(http.StatusCreated, artwork)
@@ -101,7 +117,18 @@ func UpdateArtwork(c *gin.Context) {
 	fmt.Println("CACHE DELETE for artwork:", id)
 	cache.AppCache.Delete(cacheKey)
 
-	c.JSON(http.StatusOK, artwork)
+	var updatedArtwork models.Artwork
+	database.DB.First(&updatedArtwork, artwork.ID)
+
+	msg := WebSocketMessage{Event: "artwork_updated", Artwork: updatedArtwork}
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("Error marshalling websocket message:", err)
+	} else {
+		websocket.AppHub.Broadcast(msgBytes)
+	}
+
+	c.JSON(http.StatusOK, updatedArtwork)
 }
 
 // DeleteArtwork - DELETE /artworks/:id

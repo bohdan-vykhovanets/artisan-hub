@@ -9,6 +9,7 @@ import (
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/cache"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/database"
 	"github.com/bohdan-vykhovanets/artisan-hub/internal/handlers"
+	"github.com/bohdan-vykhovanets/artisan-hub/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -22,9 +23,16 @@ func main() {
 	database.ConnectDatabase()
 	cache.InitCache()
 
+	websocket.AppHub = websocket.NewHub()
+	go websocket.AppHub.Run()
+
 	r := gin.Default()
 
 	r.LoadHTMLGlob("templates/*")
+
+	r.GET("/ws", func(c *gin.Context) {
+		websocket.ServeWs(c, websocket.AppHub)
+	})
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{

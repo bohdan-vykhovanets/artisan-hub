@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Name}} - Artisan Hub</title>
     <meta name="description" content="{{.Bio}}">
+    <meta name="artist-id" content="{{.ID}}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-5R3GYLJR6N"></script>
@@ -15,11 +16,9 @@
         gtag('config', 'G-5R3GYLJR6N', { 'debug_mode': true });
     </script>
     <style>
-        .artwork-card-img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
+        .artwork-card-img { width: 100%; height: 250px; object-fit: cover; }
+        .new-artwork { animation: fadeIn 1s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -34,7 +33,7 @@
     <hr>
 
     <h2 class="mb-3">Works by {{.Name}}</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
+    <div class="row row-cols-1 row-cols-md-3 g-4" id="artworks-grid">
         {{if .Artworks}}
         {{range .Artworks}}
         <div class="col">
@@ -49,9 +48,59 @@
         </div>
         {{end}}
         {{else}}
-        <p>This artist has not uploaded any works yet.</p>
+        <p id="no-artworks-message">This artist has not uploaded any works yet.</p>
         {{end}}
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const grid = document.getElementById('artworks-grid');
+        const noArtworksMessage = document.getElementById('no-artworks-message');
+        const currentArtistId = document.querySelector('meta[name="artist-id"]').getAttribute('content');
+
+        function createArtworkCard(artwork) {
+            return `
+            <div class="col new-artwork" id="artwork-card-${artwork.ID}">
+                <a href="/artworks/${artwork.ID}" class="text-decoration-none">
+                    <div class="card h-100">
+                        <img src="${artwork.ImageURL}" class="card-img-top artwork-card-img" alt="${artwork.Title}">
+                        <div class="card-body">
+                            <h5 class="card-title text-dark">${artwork.Title}</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            `;
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
+
+        socket.onopen = () => console.log("WebSocket connection established for artist:", currentArtistId);
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log("Received WebSocket message:", data);
+
+            if (data.artwork.ArtistID != currentArtistId) {
+                console.log(`Artwork ${data.artwork.ID} ignored, belongs to artist ${data.artwork.ArtistID}`);
+                return;
+            }
+
+            if (noArtworksMessage) {
+                noArtworksMessage.remove();
+            }
+
+            const existingCard = document.getElementById(`artwork-card-${data.artwork.ID}`);
+            if (existingCard) {
+                existingCard.remove();
+            }
+            
+            const newCardHTML = createArtworkCard(data.artwork);
+            grid.insertAdjacentHTML('afterbegin', newCardHTML);
+        };
+    });
+</script>
 </body>
 </html>
